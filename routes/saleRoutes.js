@@ -6,7 +6,7 @@ const saleController = require("../controllers/saleController");
 // Get all sales (admin only)
 router.get("/", protect, admin, async (req, res) => {
   const Sale = require("../Models/Sale");
-  const sales = await Sale.find().populate("product");
+  const sales = await Sale.find().populate("product").populate("seller");
   res.json(sales);
 });
 

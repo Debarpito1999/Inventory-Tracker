@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { productsAPI } from '../services/api';
 import './Modal.css';
 
-const ProductModal = ({ product, suppliers, onClose, onSave }) => {
+const ProductModal = ({ product, suppliers, sellers, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     name: '',
     category: '',
     price: '',
     stock: '',
+    type: 'selling',
     supplier: '',
+    seller: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -20,7 +22,9 @@ const ProductModal = ({ product, suppliers, onClose, onSave }) => {
         category: product.category || '',
         price: product.price || '',
         stock: product.stock || '',
+        type: product.type || 'selling',
         supplier: product.supplier?._id || '',
+        seller: product.seller?._id || '',
       });
     }
   }, [product]);
@@ -41,6 +45,7 @@ const ProductModal = ({ product, suppliers, onClose, onSave }) => {
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock) || 0,
         supplier: formData.supplier || undefined,
+        seller: formData.seller || undefined,
       };
 
       if (product) {
@@ -120,21 +125,56 @@ const ProductModal = ({ product, suppliers, onClose, onSave }) => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Supplier</label>
+            <label className="form-label">Product Type *</label>
             <select
-              name="supplier"
+              name="type"
               className="form-select"
-              value={formData.supplier}
+              value={formData.type}
               onChange={handleChange}
+              required
             >
-              <option value="">Select a supplier</option>
-              {suppliers.map((supplier) => (
-                <option key={supplier._id} value={supplier._id}>
-                  {supplier.name}
-                </option>
-              ))}
+              <option value="raw">Raw (from supplier)</option>
+              <option value="selling">Selling (to seller)</option>
             </select>
           </div>
+
+          {formData.type === 'raw' && (
+            <div className="form-group">
+              <label className="form-label">Supplier</label>
+              <select
+                name="supplier"
+                className="form-select"
+                value={formData.supplier}
+                onChange={handleChange}
+              >
+                <option value="">Select a supplier</option>
+                {suppliers.map((supplier) => (
+                  <option key={supplier._id} value={supplier._id}>
+                    {supplier.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {formData.type === 'selling' && (
+            <div className="form-group">
+              <label className="form-label">Seller</label>
+              <select
+                name="seller"
+                className="form-select"
+                value={formData.seller}
+                onChange={handleChange}
+              >
+                <option value="">Select a seller</option>
+                {sellers?.map((seller) => (
+                  <option key={seller._id} value={seller._id}>
+                    {seller.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="modal-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose}>

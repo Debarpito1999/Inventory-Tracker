@@ -30,6 +30,9 @@ const Navbar = () => {
           <Link to="/suppliers" className="navbar-link">
             Suppliers
           </Link>
+          <Link to="/sellers" className="navbar-link">
+            Sellers
+          </Link>
           {user.role === 'admin' && (
             <Link to="/sales" className="navbar-link">
               Sales

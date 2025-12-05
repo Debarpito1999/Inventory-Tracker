@@ -60,6 +60,14 @@ export const suppliersAPI = {
   delete: (id) => api.delete(`/suppliers/${id}`),
 };
 
+// Sellers API
+export const sellersAPI = {
+  getAll: () => api.get('/sellers'),
+  create: (data) => api.post('/sellers', data),
+  update: (id, data) => api.put(`/sellers/${id}`, data),
+  delete: (id) => api.delete(`/sellers/${id}`),
+};
+
 // Sales API
 export const salesAPI = {
   getAll: () => api.get('/sales'),

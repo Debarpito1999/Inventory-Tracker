@@ -18,6 +18,7 @@ app.use(upload.none()); // Parse multipart/form-data (form-data in Postman)
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/suppliers', require('./routes/supplierRoutes'));
+app.use('/api/sellers', require('./routes/sellerRoutes'));
 app.use('/api/sales', require('./routes/saleRoutes'));
 
 // Diagnostic endpoint to check email configuration

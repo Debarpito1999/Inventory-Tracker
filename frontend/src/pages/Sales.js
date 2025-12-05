@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { salesAPI, productsAPI } from '../services/api';
+import { salesAPI, productsAPI, sellersAPI } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import './Sales.css';
 
 const Sales = () => {
   const [sales, setSales] = useState([]);
   const [products, setProducts] = useState([]);
+  const [sellers, setSellers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showSaleModal, setShowSaleModal] = useState(false);
-  const [saleForm, setSaleForm] = useState({ product: '', quantity: '' });
+  const [saleForm, setSaleForm] = useState({ product: '', seller: '', quantity: '' });
   const [message, setMessage] = useState({ type: '', text: '' });
   const { user } = useContext(AuthContext);
 
@@ -20,12 +21,14 @@ const Sales = () => {
 
   const loadData = async () => {
     try {
-      const [salesRes, productsRes] = await Promise.all([
+      const [salesRes, productsRes, sellersRes] = await Promise.all([
         salesAPI.getAll(),
         productsAPI.getAll(),
+        sellersAPI.getAll(),
       ]);
       setSales(salesRes.data);
       setProducts(productsRes.data);
+      setSellers(sellersRes.data);
     } catch (error) {
       showMessage('error', 'Failed to load data');
     } finally {
@@ -45,10 +48,11 @@ const Sales = () => {
     try {
       await salesAPI.create({
         product: saleForm.product,
+        seller: saleForm.seller,
         quantity: parseInt(saleForm.quantity),
       });
       showMessage('success', 'Sale recorded successfully');
-      setSaleForm({ product: '', quantity: '' });
+      setSaleForm({ product: '', seller: '', quantity: '' });
       setShowSaleModal(false);
       loadData();
     } catch (error) {
@@ -99,6 +103,7 @@ const Sales = () => {
                 <tr>
                   <th>Date</th>
                   <th>Product</th>
+                  <th>Seller</th>
                   <th>Quantity</th>
                   <th>Unit Price</th>
                   <th>Total Price</th>
@@ -113,6 +118,7 @@ const Sales = () => {
                         : 'N/A'}
                     </td>
                     <td>{sale.product?.name || 'N/A'}</td>
+                    <td>{sale.seller?.name || 'N/A'}</td>
                     <td>{sale.quantity}</td>
                     <td>
                       {sale.product?.price
@@ -156,6 +162,24 @@ const Sales = () => {
                         {product.name} (Stock: {product.stock})
                       </option>
                     ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Seller *</label>
+                <select
+                  name="seller"
+                  className="form-select"
+                  value={saleForm.seller}
+                  onChange={(e) => setSaleForm({ ...saleForm, seller: e.target.value })}
+                  required
+                >
+                  <option value="">Select a seller</option>
+                  {sellers.map((seller) => (
+                    <option key={seller._id} value={seller._id}>
+                      {seller.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 

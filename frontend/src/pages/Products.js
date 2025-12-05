@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { productsAPI, suppliersAPI } from '../services/api';
+import { productsAPI, suppliersAPI, sellersAPI } from '../services/api';
 import ProductModal from '../components/ProductModal';
 import './Products.css';
 
 const Products = () => {
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+  const [sellers, setSellers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -17,12 +18,14 @@ const Products = () => {
 
   const loadData = async () => {
     try {
-      const [productsRes, suppliersRes] = await Promise.all([
+      const [productsRes, suppliersRes, sellersRes] = await Promise.all([
         productsAPI.getAll(),
         suppliersAPI.getAll(),
+        sellersAPI.getAll(),
       ]);
       setProducts(productsRes.data);
       setSuppliers(suppliersRes.data);
+      setSellers(sellersRes.data);
     } catch (error) {
       showMessage('error', 'Failed to load data');
     } finally {
@@ -102,7 +105,9 @@ const Products = () => {
                   <th>Category</th>
                   <th>Price</th>
                   <th>Stock</th>
+                  <th>Type</th>
                   <th>Supplier</th>
+                  <th>Seller</th>
                   <th>Last Restocked</th>
                   <th>Actions</th>
                 </tr>
@@ -126,7 +131,13 @@ const Products = () => {
                         {product.stock || 0}
                       </span>
                     </td>
+                    <td>
+                      <span className={`badge ${product.type === 'raw' ? 'badge-info' : 'badge-primary'}`}>
+                        {product.type === 'raw' ? 'Raw' : 'Selling'}
+                      </span>
+                    </td>
                     <td>{product.supplier?.name || 'N/A'}</td>
+                    <td>{product.seller?.name || 'N/A'}</td>
                     <td>
                       {product.lastRestocked
                         ? new Date(product.lastRestocked).toLocaleDateString()
@@ -160,6 +171,7 @@ const Products = () => {
         <ProductModal
           product={editingProduct}
           suppliers={suppliers}
+          sellers={sellers}
           onClose={handleModalClose}
           onSave={handleModalSave}
         />

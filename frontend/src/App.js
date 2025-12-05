@@ -9,6 +9,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import Suppliers from './pages/Suppliers';
+import Sellers from './pages/Sellers';
 import Sales from './pages/Sales';
 import './App.css';
 
@@ -43,6 +44,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <Suppliers />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/sellers"
+              element={
+                <PrivateRoute>
+                  <Sellers />
                 </PrivateRoute>
               }
             />
