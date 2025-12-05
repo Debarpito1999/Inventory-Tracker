@@ -223,3 +223,4 @@ Your Name
 
 **Note**: Make sure to never commit your `.env` file to version control. It contains sensitive information like database credentials and email passwords.
 
+
