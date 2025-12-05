@@ -56,3 +56,4 @@ This creates an optimized production build in the `build` folder.
 The frontend communicates with the backend API running on port 5000. Make sure the backend server is running before starting the frontend.
 
 
+
