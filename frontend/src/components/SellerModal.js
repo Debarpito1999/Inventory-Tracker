@@ -122,3 +122,5 @@ const SellerModal = ({ seller, onClose, onSave }) => {
 
 export default SellerModal;
 
+
+

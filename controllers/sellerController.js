@@ -24,3 +24,5 @@ exports.deleteSeller = async (req, res) => {
   res.json({ message: "Seller removed" });
 };
 
+
+

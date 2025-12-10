@@ -9,3 +9,5 @@ const sellerSchema = new mongoose.Schema({
 
 module.exports = mongoose.model('Seller', sellerSchema);
 
+
+

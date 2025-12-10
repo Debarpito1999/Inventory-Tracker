@@ -10,3 +10,5 @@ router.delete('/:id', protect, admin, sellerController.deleteSeller);
 
 module.exports = router;
 
+
+
