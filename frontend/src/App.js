@@ -11,6 +11,7 @@ import Products from './pages/Products';
 import Suppliers from './pages/Suppliers';
 import Sellers from './pages/Sellers';
 import Sales from './pages/Sales';
+import Production from './pages/Production';
 import './App.css';
 
 function App() {
@@ -60,6 +61,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <Sales />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/production"
+              element={
+                <PrivateRoute>
+                  <Production />
                 </PrivateRoute>
               }
             />

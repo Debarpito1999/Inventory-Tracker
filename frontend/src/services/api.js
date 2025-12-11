@@ -74,6 +74,25 @@ export const salesAPI = {
   create: (data) => api.post('/sales', data),
 };
 
+// Production API
+export const productionsAPI = {
+  getAll: () => api.get('/productions'),
+  getByDate: (date) => api.get(`/productions/date/${date}`),
+  getByDateRange: (startDate, endDate) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    return api.get(`/productions/date-range?${params.toString()}`);
+  },
+  getStats: (startDate, endDate) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    return api.get(`/productions/stats?${params.toString()}`);
+  },
+  create: (data) => api.post('/productions', data),
+};
+
 export default api;
 
 

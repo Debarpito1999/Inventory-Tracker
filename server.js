@@ -20,6 +20,7 @@ app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/suppliers', require('./routes/supplierRoutes'));
 app.use('/api/sellers', require('./routes/sellerRoutes'));
 app.use('/api/sales', require('./routes/saleRoutes'));
+app.use('/api/productions', require('./routes/productionRoutes'));
 
 // Diagnostic endpoint to check email configuration
 app.get('/api/check-email-config', (req, res) => {
