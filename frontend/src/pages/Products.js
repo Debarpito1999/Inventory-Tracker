@@ -1,37 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { productsAPI, suppliersAPI, sellersAPI } from '../services/api';
+import React, { useState, useEffect, useCallback } from 'react';
+import { productsAPI, suppliersAPI } from '../services/api';
 import ProductModal from '../components/ProductModal';
 import './Products.css';
 
 const Products = () => {
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
-  const [sellers, setSellers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      const [productsRes, suppliersRes, sellersRes] = await Promise.all([
+      const [productsRes, suppliersRes] = await Promise.all([
         productsAPI.getAll(),
         suppliersAPI.getAll(),
-        sellersAPI.getAll(),
       ]);
       setProducts(productsRes.data);
       setSuppliers(suppliersRes.data);
-      setSellers(sellersRes.data);
     } catch (error) {
       showMessage('error', 'Failed to load data');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const showMessage = (type, text) => {
     setMessage({ type, text });
@@ -107,7 +104,6 @@ const Products = () => {
                   <th>Stock</th>
                   <th>Type</th>
                   <th>Supplier</th>
-                  <th>Seller</th>
                   <th>Last Restocked</th>
                   <th>Actions</th>
                 </tr>
@@ -133,11 +129,14 @@ const Products = () => {
                     </td>
                     <td>
                       <span className={`badge ${product.type === 'raw' ? 'badge-info' : 'badge-primary'}`}>
-                        {product.type === 'raw' ? 'Raw' : 'Selling'}
+                        {product.type === 'raw' ? 'Raw' : 'Produced'}
                       </span>
                     </td>
-                    <td>{product.supplier?.name || 'N/A'}</td>
-                    <td>{product.seller?.name || 'N/A'}</td>
+                    <td>
+                      {product.type === 'raw' 
+                        ? (product.supplier?.name || 'N/A')
+                        : 'Production'}
+                    </td>
                     <td>
                       {product.lastRestocked
                         ? new Date(product.lastRestocked).toLocaleDateString()
@@ -171,7 +170,6 @@ const Products = () => {
         <ProductModal
           product={editingProduct}
           suppliers={suppliers}
-          sellers={sellers}
           onClose={handleModalClose}
           onSave={handleModalSave}
         />

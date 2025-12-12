@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { suppliersAPI } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import SupplierModal from '../components/SupplierModal';
@@ -14,11 +14,7 @@ const Suppliers = () => {
 
   const isAdmin = user?.role === 'admin';
 
-  useEffect(() => {
-    loadSuppliers();
-  }, []);
-
-  const loadSuppliers = async () => {
+  const loadSuppliers = useCallback(async () => {
     try {
       const response = await suppliersAPI.getAll();
       setSuppliers(response.data);
@@ -27,7 +23,11 @@ const Suppliers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadSuppliers();
+  }, [loadSuppliers]);
 
   const showMessage = (type, text) => {
     setMessage({ type, text });
@@ -151,6 +151,8 @@ const Suppliers = () => {
 };
 
 export default Suppliers;
+
+
 
 
 

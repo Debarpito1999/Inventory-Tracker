@@ -1,5 +1,6 @@
 const Production = require('../Models/Production');
 const Product = require('../Models/Product');
+const mongoose = require('mongoose');
 const { checkAndAlertLowStock } = require('../utils/lowStockChecker');
 
 // Get all productions
@@ -91,19 +92,6 @@ const create = async (req, res) => {
       return res.status(400).json({ message: 'Invalid product IDs in produced products' });
     }
     
-    // Check if raw materials have sufficient stock
-    for (const rm of rawMaterials) {
-      const product = rawMaterialProducts.find(p => p._id.toString() === rm.productId);
-      if (!product) {
-        return res.status(400).json({ message: `Raw material ${rm.productId} not found` });
-      }
-      if (product.stock < rm.quantity) {
-        return res.status(400).json({ 
-          message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Required: ${rm.quantity}` 
-        });
-      }
-    }
-    
     // Prepare raw materials with names
     const rawMaterialsWithNames = rawMaterials.map(rm => {
       const product = rawMaterialProducts.find(p => p._id.toString() === rm.productId);
@@ -127,7 +115,6 @@ const create = async (req, res) => {
     // Calculate ratios
     const ratios = [];
     const totalRawQuantity = rawMaterialsWithNames.reduce((sum, rm) => sum + rm.quantity, 0);
-    const totalProducedQuantity = producedProductsWithNames.reduce((sum, pp) => sum + pp.quantity, 0);
     
     // Calculate ratio for each raw material to each produced product
     // Ratio shows: how much product is produced per unit of this specific raw material
@@ -147,44 +134,92 @@ const create = async (req, res) => {
       }
     }
     
-    // Deduct raw materials from stock
-    for (const rm of rawMaterialsWithNames) {
-      await Product.findByIdAndUpdate(rm.productId, {
-        $inc: { stock: -rm.quantity }
-      });
+    // Use MongoDB transaction to ensure atomicity of stock check and deduction
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    
+    try {
+      // Atomically check and deduct raw materials from stock
+      // Using findOneAndUpdate with conditions ensures atomic check-and-update
+      for (const rm of rawMaterialsWithNames) {
+        const product = rawMaterialProducts.find(p => p._id.toString() === rm.productId);
+        if (!product) {
+          throw new Error(`Raw material ${rm.productId} not found`);
+        }
+        
+        // Atomic operation: only update if stock is sufficient
+        const updatedRawProduct = await Product.findOneAndUpdate(
+          { 
+            _id: rm.productId, 
+            stock: { $gte: rm.quantity } // Only update if stock is sufficient
+          },
+          { 
+            $inc: { stock: -rm.quantity } 
+          },
+          { 
+            new: true, 
+            session // Include in transaction
+          }
+        );
+        
+        if (!updatedRawProduct) {
+          // Get current stock for accurate error message
+          const currentProduct = await Product.findById(rm.productId).session(session);
+          const currentStock = currentProduct ? currentProduct.stock : 0;
+          throw new Error(
+            `Insufficient stock for ${product.name}. Available: ${currentStock}, Required: ${rm.quantity}`
+          );
+        }
+      }
       
-      // Check for low stock after deduction
-      const updatedProduct = await Product.findById(rm.productId);
-      await checkAndAlertLowStock(updatedProduct);
-    }
-    
-    // Add produced products to stock
-    for (const pp of producedProductsWithNames) {
-      await Product.findByIdAndUpdate(pp.productId, {
-        $inc: { stock: pp.quantity },
-        lastRestocked: new Date()
-      });
+      // Add produced products to stock (within transaction)
+      for (const pp of producedProductsWithNames) {
+        await Product.findByIdAndUpdate(
+          pp.productId,
+          {
+            $inc: { stock: pp.quantity },
+            lastRestocked: new Date()
+          },
+          { session } // Include in transaction
+        );
+      }
       
-      // Check for low stock (though unlikely after adding stock)
-      const updatedProduct = await Product.findById(pp.productId);
-      await checkAndAlertLowStock(updatedProduct);
+      // Create production record (within transaction)
+      const production = await Production.create([{
+        date: date ? new Date(date) : new Date(),
+        rawMaterials: rawMaterialsWithNames,
+        producedProducts: producedProductsWithNames,
+        ratios,
+        notes,
+        status: 'completed'
+      }], { session });
+      
+      // Commit transaction
+      await session.commitTransaction();
+      
+      // After successful transaction, check for low stock alerts (outside transaction)
+      for (const rm of rawMaterialsWithNames) {
+        const updatedProduct = await Product.findById(rm.productId);
+        await checkAndAlertLowStock(updatedProduct);
+      }
+      
+      for (const pp of producedProductsWithNames) {
+        const updatedProduct = await Product.findById(pp.productId);
+        await checkAndAlertLowStock(updatedProduct);
+      }
+      
+      const populatedProduction = await Production.findById(production[0]._id)
+        .populate('rawMaterials.productId')
+        .populate('producedProducts.productId');
+      
+      res.status(201).json(populatedProduction);
+    } catch (error) {
+      // Rollback transaction on error
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
     }
-    
-    // Create production record
-    const production = await Production.create({
-      date: date ? new Date(date) : new Date(),
-      rawMaterials: rawMaterialsWithNames,
-      producedProducts: producedProductsWithNames,
-      ratios,
-      notes,
-      status: 'completed'
-    });
-    
-    const populatedProduction = await Production.findById(production._id)
-      .populate('rawMaterials.productId')
-      .populate('producedProducts.productId');
-    
-    res.status(201).json(populatedProduction);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
