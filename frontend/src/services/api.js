@@ -93,6 +93,18 @@ export const productionsAPI = {
   create: (data) => api.post('/productions', data),
 };
 
+// Produced Transactions API
+export const producedTransactAPI = {
+  getAll: (startDate, endDate) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const qs = params.toString();
+    return api.get(`/produced-transactions${qs ? `?${qs}` : ''}`);
+  },
+  create: (data) => api.post('/produced-transactions', data),
+};
+
 export default api;
 
 

@@ -9,7 +9,7 @@ const Sales = () => {
   const [sellers, setSellers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showSaleModal, setShowSaleModal] = useState(false);
-  const [saleForm, setSaleForm] = useState({ product: '', seller: '', quantity: '' });
+  const [saleForm, setSaleForm] = useState({ product: '', seller: '', quantity: '', unitPrice: '' });
   const [message, setMessage] = useState({ type: '', text: '' });
   const { user } = useContext(AuthContext);
 
@@ -50,9 +50,10 @@ const Sales = () => {
         product: saleForm.product,
         seller: saleForm.seller,
         quantity: parseInt(saleForm.quantity),
+        unitPrice: parseFloat(saleForm.unitPrice),
       });
       showMessage('success', 'Sale recorded successfully');
-      setSaleForm({ product: '', seller: '', quantity: '' });
+      setSaleForm({ product: '', seller: '', quantity: '', unitPrice: '' });
       setShowSaleModal(false);
       loadData();
     } catch (error) {
@@ -121,7 +122,9 @@ const Sales = () => {
                     <td>{sale.seller?.name || 'N/A'}</td>
                     <td>{sale.quantity}</td>
                     <td>
-                      {sale.product?.price
+                      {sale.unitPrice
+                        ? `$${sale.unitPrice.toFixed(2)}`
+                        : sale.product?.price
                         ? `$${sale.product.price.toFixed(2)}`
                         : 'N/A'}
                     </td>
@@ -194,6 +197,26 @@ const Sales = () => {
                   min="1"
                   required
                 />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Unit Price *</label>
+                <input
+                  type="number"
+                  name="unitPrice"
+                  className="form-input"
+                  value={saleForm.unitPrice}
+                  onChange={(e) => setSaleForm({ ...saleForm, unitPrice: e.target.value })}
+                  step="0.01"
+                  min="0.01"
+                  placeholder={saleForm.product ? products.find(p => p._id === saleForm.product)?.price?.toFixed(2) || '' : ''}
+                  required
+                />
+                {saleForm.product && products.find(p => p._id === saleForm.product)?.price && (
+                  <small className="form-hint">
+                    Product default price: ${products.find(p => p._id === saleForm.product).price.toFixed(2)}
+                  </small>
+                )}
               </div>
 
               <div className="modal-actions">

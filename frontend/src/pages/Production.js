@@ -16,7 +16,7 @@ const Production = () => {
   const [productionForm, setProductionForm] = useState({
     date: new Date().toISOString().split('T')[0],
     rawMaterials: [{ productId: '', quantity: '' }],
-    producedProducts: [{ productId: '', quantity: '' }],
+    producedProducts: [{ productId: '', quantity: '', isNew: false, name: '', category: '', price: '' }],
     notes: ''
   });
 
@@ -89,7 +89,10 @@ const Production = () => {
   const handleAddProducedProduct = () => {
     setProductionForm({
       ...productionForm,
-      producedProducts: [...productionForm.producedProducts, { productId: '', quantity: '' }]
+      producedProducts: [
+        ...productionForm.producedProducts,
+        { productId: '', quantity: '', isNew: false, name: '', category: '', price: '' }
+      ]
     });
   };
 
@@ -103,6 +106,19 @@ const Production = () => {
     newProducedProducts[index][field] = value;
     setProductionForm({ ...productionForm, producedProducts: newProducedProducts });
   };
+  
+  const toggleProducedProductMode = (index, isNew) => {
+    const newProducedProducts = [...productionForm.producedProducts];
+    newProducedProducts[index] = {
+      productId: isNew ? '' : newProducedProducts[index].productId,
+      quantity: newProducedProducts[index].quantity,
+      isNew,
+      name: isNew ? newProducedProducts[index].name : '',
+      category: newProducedProducts[index].category,
+      price: newProducedProducts[index].price
+    };
+    setProductionForm({ ...productionForm, producedProducts: newProducedProducts });
+  };
 
   const handleProductionSubmit = async (e) => {
     e.preventDefault();
@@ -112,9 +128,14 @@ const Production = () => {
     const validRawMaterials = productionForm.rawMaterials.filter(
       rm => rm.productId && rm.quantity && parseFloat(rm.quantity) > 0
     );
-    const validProducedProducts = productionForm.producedProducts.filter(
-      pp => pp.productId && pp.quantity && parseFloat(pp.quantity) > 0
-    );
+    const validProducedProducts = productionForm.producedProducts.filter(pp => {
+      const qtyOk = pp.quantity && parseFloat(pp.quantity) > 0;
+      if (!qtyOk) return false;
+      if (pp.isNew) {
+        return pp.name && pp.name.trim().length > 0;
+      }
+      return pp.productId;
+    });
 
     if (validRawMaterials.length === 0) {
       showMessage('error', 'Please add at least one raw material');
@@ -133,10 +154,19 @@ const Production = () => {
           productId: rm.productId,
           quantity: parseFloat(rm.quantity)
         })),
-        producedProducts: validProducedProducts.map(pp => ({
-          productId: pp.productId,
-          quantity: parseFloat(pp.quantity)
-        })),
+        producedProducts: validProducedProducts.map(pp => {
+          const base = { quantity: parseFloat(pp.quantity) };
+          if (pp.isNew) {
+            return {
+              ...base,
+              name: pp.name,
+              category: pp.category,
+              price: pp.price ? parseFloat(pp.price) : 0,
+              type: 'selling'
+            };
+          }
+          return { ...base, productId: pp.productId };
+        }),
         notes: productionForm.notes
       });
 
@@ -144,7 +174,7 @@ const Production = () => {
       setProductionForm({
         date: new Date().toISOString().split('T')[0],
         rawMaterials: [{ productId: '', quantity: '' }],
-        producedProducts: [{ productId: '', quantity: '' }],
+        producedProducts: [{ productId: '', quantity: '', isNew: false, name: '', category: '', price: '' }],
         notes: ''
       });
       setShowProductionModal(false);
@@ -377,20 +407,61 @@ const Production = () => {
                   </button>
                 </div>
                 {productionForm.producedProducts.map((pp, index) => (
-                  <div key={index} className="form-row">
-                    <select
-                      className="form-select"
-                      value={pp.productId}
-                      onChange={(e) => handleProducedProductChange(index, 'productId', e.target.value)}
-                      required
-                    >
-                      <option value="">Select product</option>
-                      {sellingProducts.map((product) => (
-                        <option key={product._id} value={product._id}>
-                          {product.name} (Stock: {product.stock})
-                        </option>
-                      ))}
-                    </select>
+                  <div key={index} className="form-row produced-product-row">
+                    <div className="toggle-row">
+                      <label className="checkbox">
+                        <input
+                          type="checkbox"
+                          checked={pp.isNew}
+                          onChange={(e) => toggleProducedProductMode(index, e.target.checked)}
+                        />
+                        <span>Create new product</span>
+                      </label>
+                    </div>
+
+                    {pp.isNew ? (
+                      <>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="Product name *"
+                          value={pp.name}
+                          onChange={(e) => handleProducedProductChange(index, 'name', e.target.value)}
+                          required
+                        />
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="Category (optional)"
+                          value={pp.category}
+                          onChange={(e) => handleProducedProductChange(index, 'category', e.target.value)}
+                        />
+                        <input
+                          type="number"
+                          className="form-input"
+                          placeholder="Price (optional)"
+                          value={pp.price}
+                          onChange={(e) => handleProducedProductChange(index, 'price', e.target.value)}
+                          min="0"
+                          step="0.01"
+                        />
+                      </>
+                    ) : (
+                      <select
+                        className="form-select"
+                        value={pp.productId}
+                        onChange={(e) => handleProducedProductChange(index, 'productId', e.target.value)}
+                        required
+                      >
+                        <option value="">Select product</option>
+                        {sellingProducts.map((product) => (
+                          <option key={product._id} value={product._id}>
+                            {product.name} (Stock: {product.stock})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+
                     <input
                       type="number"
                       className="form-input"
@@ -401,6 +472,7 @@ const Production = () => {
                       step="0.01"
                       required
                     />
+
                     {productionForm.producedProducts.length > 1 && (
                       <button
                         type="button"

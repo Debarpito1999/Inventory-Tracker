@@ -15,9 +15,9 @@ const EMAIL_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
 async function checkAndAlertLowStock(productId, oldStock = null) {
   console.log('\n🔍 Checking low stock alert...');
   try {
-    // Get product with supplier info
+    // Get product
     const product = typeof productId === 'string' 
-      ? await Product.findById(productId).populate('supplier')
+      ? await Product.findById(productId)
       : productId;
     
     if (!product) {
@@ -62,7 +62,6 @@ async function checkAndAlertLowStock(productId, oldStock = null) {
 
     // Get all low stock items for comprehensive email
     const allLowStock = await Product.find({ stock: { $lt: threshold } })
-      .populate('supplier')
       .sort({ stock: 1 }); // Sort by stock ascending (lowest first)
 
     if (allLowStock.length === 0) return false;
@@ -121,7 +120,6 @@ async function checkAllProductsForLowStock() {
     console.log(`   Threshold: ${threshold}`);
     
     const lowStock = await Product.find({ stock: { $lt: threshold } })
-      .populate('supplier')
       .sort({ stock: 1 });
 
     console.log(`   Found ${lowStock.length} low stock item(s)`);

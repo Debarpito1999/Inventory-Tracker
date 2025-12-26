@@ -62,7 +62,8 @@ const getByDate = async (req, res) => {
 // Create new production
 const create = async (req, res) => {
   try {
-    const { date, rawMaterials, producedProducts, notes } = req.body;
+    const { date, rawMaterials, notes } = req.body;
+    let { producedProducts } = req.body;
     
     // Validate input
     if (!rawMaterials || !Array.isArray(rawMaterials) || rawMaterials.length === 0) {
@@ -83,18 +84,24 @@ const create = async (req, res) => {
       return res.status(400).json({ message: 'All raw materials must be of type "raw"' });
     }
     
-    // Fetch produced products to validate and get names
-    const producedProductDocs = await Product.find({
-      _id: { $in: producedProducts.map(pp => pp.productId) }
-    });
-    
-    if (producedProductDocs.length !== producedProducts.length) {
-      return res.status(400).json({ message: 'Invalid product IDs in produced products' });
+    // Separate produced products: existing vs new
+    const newProducedProducts = producedProducts.filter(pp => !pp.productId);
+    for (const pp of newProducedProducts) {
+      if (!pp.name) {
+        return res.status(400).json({ message: 'New produced products require a name' });
+      }
+      if (pp.price === undefined || pp.price === null) {
+        pp.price = 0; // ensure required price field
+      }
+      pp.type = pp.type || 'selling';
     }
     
     // Prepare raw materials with names
     const rawMaterialsWithNames = rawMaterials.map(rm => {
-      const product = rawMaterialProducts.find(p => p._id.toString() === rm.productId);
+      const product = rawMaterialProducts.find(p => p._id.toString() === rm.productId.toString());
+      if (!product) {
+        throw new Error(`Raw material product not found for ID: ${rm.productId}`);
+      }
       return {
         productId: rm.productId,
         quantity: rm.quantity,
@@ -102,43 +109,107 @@ const create = async (req, res) => {
       };
     });
     
-    // Prepare produced products with names
-    const producedProductsWithNames = producedProducts.map(pp => {
-      const product = producedProductDocs.find(p => p._id.toString() === pp.productId);
-      return {
-        productId: pp.productId,
-        quantity: pp.quantity,
-        productName: product.name
-      };
-    });
-    
-    // Calculate ratios
-    const ratios = [];
-    const totalRawQuantity = rawMaterialsWithNames.reduce((sum, rm) => sum + rm.quantity, 0);
-    
-    // Calculate ratio for each raw material to each produced product
-    // Ratio shows: how much product is produced per unit of this specific raw material
-    for (const rm of rawMaterialsWithNames) {
-      for (const pp of producedProductsWithNames) {
-        // Direct ratio: product quantity per unit of this raw material
-        // Example: If 10 units of raw material produces 5 units of product, ratio = 0.5
-        const directRatio = rm.quantity > 0 ? pp.quantity / rm.quantity : 0;
-        
-        ratios.push({
-          rawMaterialId: rm.productId,
-          rawMaterialName: rm.productName,
-          productId: pp.productId,
-          productName: pp.productName,
-          ratio: directRatio
-        });
-      }
-    }
-    
     // Use MongoDB transaction to ensure atomicity of stock check and deduction
     const session = await mongoose.startSession();
     session.startTransaction();
     
     try {
+      // Create newly produced products within the transaction
+      if (newProducedProducts.length > 0) {
+        const productsToCreate = newProducedProducts.map(pp => ({
+          name: pp.name,
+          category: pp.category,
+          price: pp.price,
+          stock: 0,
+          type: pp.type,
+          lastRestocked: new Date()
+        }));
+        
+        const createdProducts = await Product.insertMany(productsToCreate, { session });
+        
+        if (createdProducts.length !== newProducedProducts.length) {
+          throw new Error(`Failed to create all products. Expected ${newProducedProducts.length}, created ${createdProducts.length}`);
+        }
+        
+        // Attach created IDs back to producedProducts array
+        let createdIndex = 0;
+        producedProducts = producedProducts.map(pp => {
+          if (pp.productId) return pp;
+          const created = createdProducts[createdIndex++];
+          if (!created || !created._id) {
+            throw new Error(`Failed to get created product at index ${createdIndex - 1}`);
+          }
+          return { ...pp, productId: created._id };
+        });
+      }
+      
+      // Fetch produced products to validate and get names (including newly created)
+      const producedProductIds = producedProducts.map((pp, index) => {
+        if (!pp.productId) {
+          throw new Error(`Produced product at index ${index} is missing productId`);
+        }
+        // Normalize to ObjectId
+        return pp.productId instanceof mongoose.Types.ObjectId 
+          ? pp.productId 
+          : new mongoose.Types.ObjectId(pp.productId);
+      });
+      
+      const producedProductDocs = await Product.find({
+        _id: { $in: producedProductIds }
+      }).session(session);
+      
+      if (producedProductDocs.length !== producedProducts.length) {
+        throw new Error('Invalid product IDs in produced products');
+      }
+      
+      // Prepare produced products with names
+      const producedProductsWithNames = producedProducts.map((pp, index) => {
+        if (!pp.productId) {
+          throw new Error(`Produced product at index ${index} is missing productId`);
+        }
+        
+        // Normalize productId to string for comparison
+        const productIdStr = pp.productId instanceof mongoose.Types.ObjectId 
+          ? pp.productId.toString() 
+          : pp.productId.toString();
+        
+        const product = producedProductDocs.find(p => p._id.toString() === productIdStr);
+        
+        if (!product) {
+          throw new Error(`Product not found for ID: ${productIdStr} at index ${index}. Available IDs: ${producedProductDocs.map(p => p._id.toString()).join(', ')}`);
+        }
+        
+        if (!product.name) {
+          throw new Error(`Product found but missing name for ID: ${productIdStr}`);
+        }
+        
+        return {
+          productId: pp.productId instanceof mongoose.Types.ObjectId ? pp.productId : new mongoose.Types.ObjectId(pp.productId),
+          quantity: pp.quantity,
+          productName: product.name
+        };
+      });
+      
+      // Calculate ratios
+      const ratios = [];
+      // Calculate ratio for each raw material to each produced product
+      // Ratio shows: how much product is produced per unit of this specific raw material
+      for (const rm of rawMaterialsWithNames) {
+        for (const pp of producedProductsWithNames) {
+          // Direct ratio: product quantity per unit of this raw material
+          // Example: If 10 units of raw material produces 5 units of product, ratio = 0.5
+          const directRatio = rm.quantity > 0 ? pp.quantity / rm.quantity : 0;
+          
+          ratios.push({
+            rawMaterialId: rm.productId,
+            rawMaterialName: rm.productName,
+            productId: pp.productId,
+            productName: pp.productName,
+            ratio: directRatio
+          });
+        }
+      }
+      
       // Atomically check and deduct raw materials from stock
       // Using findOneAndUpdate with conditions ensures atomic check-and-update
       for (const rm of rawMaterialsWithNames) {

@@ -2,7 +2,7 @@ const Product = require('../Models/Product');
 const { checkAndAlertLowStock } = require('../utils/lowStockChecker');
 
 const getAll = async (req, res) => {
-  const products = await Product.find().populate('supplier').populate('seller');
+  const products = await Product.find();
   res.json(products);
 };
 
@@ -13,7 +13,7 @@ const create = async (req, res) => {
   if (p.stock !== undefined) {
     await checkAndAlertLowStock(p);
   }
-  
+   
   res.status(201).json(p);
 };
 
@@ -22,7 +22,7 @@ const update = async (req, res) => {
   const oldProduct = await Product.findById(req.params.id);
   const oldStock = oldProduct ? oldProduct.stock : null;
   
-  const p = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate('supplier').populate('seller');
+  const p = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
   
   // Check for low stock if stock was changed
   if (req.body.stock !== undefined && req.body.stock !== oldStock) {
@@ -39,7 +39,7 @@ const remove = async (req, res) => {
 
 const getLowStock = async (req, res) => {
   const threshold = parseInt(req.query.t || '10', 10);
-  const low = await Product.find({ stock: { $lt: threshold } }).populate('supplier').populate('seller');
+  const low = await Product.find({ stock: { $lt: threshold } });
   res.json(low);
 };
 

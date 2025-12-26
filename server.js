@@ -3,6 +3,8 @@ const express = require('express');
 const connectDB = require('./config/db');
 const cors = require('cors');
 const multer = require('multer');
+const { protect, adminOnly } = require('./middleware/authMiddleware');
+const { getReorderSuggestion } = require('./controllers/aiController');
 
 connectDB();
 const app = express();
@@ -21,6 +23,11 @@ app.use('/api/suppliers', require('./routes/supplierRoutes'));
 app.use('/api/sellers', require('./routes/sellerRoutes'));
 app.use('/api/sales', require('./routes/saleRoutes'));
 app.use('/api/productions', require('./routes/productionRoutes'));
+app.use('/api/ai', require('./routes/aiRoutes'));
+app.use('/api/produced-transactions', require('./routes/producedTransactRoutes'));
+
+// Direct AI route (for testing ML / to avoid any routing issues)
+app.get('/api/ai/reorder/:id', protect, adminOnly, getReorderSuggestion);
 
 // Diagnostic endpoint to check email configuration
 app.get('/api/check-email-config', (req, res) => {
@@ -56,7 +63,7 @@ app.get('/api/test-low-stock-email', async (req, res) => {
     const threshold = parseInt(process.env.LOW_STOCK_THRESHOLD) || 10;
     console.log(`   Threshold: ${threshold}`);
     
-    const low = await Product.find({ stock: { $lt: threshold } }).populate('supplier');
+    const low = await Product.find({ stock: { $lt: threshold } });
     console.log(`   Found ${low.length} low stock item(s)`);
     
     if (!process.env.ADMIN_EMAIL) {
@@ -120,6 +127,8 @@ app.get('/api/test-low-stock-email', async (req, res) => {
 
 // Start low stock monitoring job
 require('./jobs/lowStockJob');
+// Start auto reorder monitoring job (predictive based)
+require('./jobs/autoReorderJob');
 
 // error handler (simple)
 app.use((err, req, res, next) => {
