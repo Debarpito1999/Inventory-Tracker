@@ -1,0 +1,50 @@
+name: Deploy MERN Inventory Tracker
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Build React frontend
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+
+      # 3. Install backend dependencies (sanity check)
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm install
+
+      # 4. Copy files to Linux server
+      - name: Deploy to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "."
+          target: "/var/www/inventory-tracker"
+
+      # 5. Restart backend using PM2
+      - name: Restart backend
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /var/www/inventory-tracker/backend
+            npm install
+            pm2 restart inventory-api || pm2 start ecosystem.config.js
+            pm2 save

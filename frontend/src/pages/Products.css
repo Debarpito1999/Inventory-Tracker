@@ -220,24 +220,16 @@
   padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid #d1d5db;
-}
-
-.name-stack .title {
+}.name-stack .title {
   display: block;
   font-weight: 700;
-}
-
-.name-stack .muted {
+}.name-stack .muted {
   display: block;
   color: #6b7280;
   font-size: 12px;
   margin-top: 2px;
-}
-
-.transactions-card {
+}.transactions-card {
   margin-top: 24px;
-}
-
-.transactions-card .card-header {
+}.transactions-card .card-header {
   margin-bottom: 0;
 }
