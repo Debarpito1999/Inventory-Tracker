@@ -35,7 +35,7 @@ const Products = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showMessage]);
 
   const loadTransactions = useCallback(async () => {
     setTxLoading(true);

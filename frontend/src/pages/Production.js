@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { productionsAPI, productsAPI } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import './Production.css';
@@ -22,19 +22,12 @@ const Production = () => {
 
   const isAdmin = user?.role === 'admin';
 
-  useEffect(() => {
-    loadData();
+  const showMessage = useCallback((type, text) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage({ type: '', text: '' }), 5000);
   }, []);
 
-  useEffect(() => {
-    if (viewMode === 'daily') {
-      loadDailyProductions();
-    } else {
-      loadAllProductions();
-    }
-  }, [viewMode, selectedDate]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const productsRes = await productsAPI.getAll();
       setProducts(productsRes.data);
@@ -43,30 +36,37 @@ const Production = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showMessage]);
 
-  const loadAllProductions = async () => {
+  const loadAllProductions = useCallback(async () => {
     try {
       const res = await productionsAPI.getAll();
       setProductions(res.data);
     } catch (error) {
       showMessage('error', 'Failed to load productions');
     }
-  };
+  }, [showMessage]);
 
-  const loadDailyProductions = async () => {
+  const loadDailyProductions = useCallback(async () => {
     try {
       const res = await productionsAPI.getByDate(selectedDate);
       setProductions(res.data);
     } catch (error) {
       showMessage('error', 'Failed to load daily productions');
     }
-  };
+  }, [selectedDate, showMessage]);
 
-  const showMessage = (type, text) => {
-    setMessage({ type, text });
-    setTimeout(() => setMessage({ type: '', text: '' }), 5000);
-  };
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    if (viewMode === 'daily') {
+      loadDailyProductions();
+    } else {
+      loadAllProductions();
+    }
+  }, [viewMode, loadAllProductions, loadDailyProductions]);
 
   const handleAddRawMaterial = () => {
     setProductionForm({

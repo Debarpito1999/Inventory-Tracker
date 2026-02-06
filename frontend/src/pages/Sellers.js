@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { sellersAPI } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import SellerModal from '../components/SellerModal';
@@ -14,11 +14,12 @@ const Sellers = () => {
 
   const isAdmin = user?.role === 'admin';
 
-  useEffect(() => {
-    loadSellers();
+  const showMessage = useCallback((type, text) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
   }, []);
 
-  const loadSellers = async () => {
+  const loadSellers = useCallback(async () => {
     try {
       const response = await sellersAPI.getAll();
       setSellers(response.data);
@@ -27,12 +28,11 @@ const Sellers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showMessage]);
 
-  const showMessage = (type, text) => {
-    setMessage({ type, text });
-    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-  };
+  useEffect(() => {
+    loadSellers();
+  }, [loadSellers]);
 
   const handleAdd = () => {
     setEditingSeller(null);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { salesAPI, productsAPI, sellersAPI } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import './Sales.css';
@@ -15,11 +15,12 @@ const Sales = () => {
 
   const isAdmin = user?.role === 'admin';
 
-  useEffect(() => {
-    loadData();
+  const showMessage = useCallback((type, text) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
   }, []);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [salesRes, productsRes, sellersRes] = await Promise.all([
         salesAPI.getAll(),
@@ -34,12 +35,11 @@ const Sales = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showMessage]);
 
-  const showMessage = (type, text) => {
-    setMessage({ type, text });
-    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-  };
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleSaleSubmit = async (e) => {
     e.preventDefault();
