@@ -17,13 +17,15 @@ jobs:
       # 2. Build React frontend
       - name: Build frontend
         working-directory: frontend
+        env:
+          REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }}
         run: |
           npm install
           npm run build
 
       # 3. Install backend dependencies (sanity check)
       - name: Install backend dependencies
-        working-directory: .
+        working-directory: backend
         run: npm install
 
       # 4. Copy files to Linux server
@@ -44,7 +46,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /var/www/inventory-tracker
+            cd /var/www/inventory-tracker/backend
             npm install
             pm2 restart inventory-api || pm2 start ecosystem.config.js
             pm2 save
