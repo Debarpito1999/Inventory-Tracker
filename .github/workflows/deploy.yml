@@ -25,7 +25,7 @@ jobs:
 
       # 3. Install backend dependencies (sanity check)
       - name: Install backend dependencies
-        working-directory: inventory-tracker
+        working-directory: backend
         run: npm install
 
       # 4. Copy files to Linux server
@@ -36,7 +36,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: "."
-          target: "/var/www/inventory-tracker"
+          target: "/var/www/inventory-tracker/backend"
 
       # 5. Restart backend using PM2
       - name: Restart backend
@@ -46,7 +46,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /var/www/inventory-tracker
+            cd /var/www/inventory-tracker/backend
             npm install
             pm2 restart inventory-api || pm2 start ecosystem.config.js
             pm2 save
