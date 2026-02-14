@@ -35,7 +35,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: "."
-          target: "/var/www/inventory-tracker/backend"
+          target: "/var/www/inventory-tracker"
 
       # 5. Restart backend using PM2
       - name: Restart backend
@@ -45,7 +45,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /var/www/inventory-tracker/backend
+            cd /var/www/inventory-tracker
             npm install
             pm2 restart inventory-api || pm2 start ecosystem.config.js
             pm2 save
