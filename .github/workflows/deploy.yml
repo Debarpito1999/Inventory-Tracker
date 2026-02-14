@@ -46,7 +46,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /var/www/inventory-tracker/backend
+            cd /var/www/inventory-tracker
             npm install
             pm2 restart inventory-api || pm2 start ecosystem.config.js
             pm2 save
