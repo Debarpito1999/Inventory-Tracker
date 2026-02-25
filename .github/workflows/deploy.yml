@@ -17,13 +17,14 @@ jobs:
       # 2. Build React frontend
       - name: Build frontend
         working-directory: frontend
+        env:
+          REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }}
         run: |
           npm install
           npm run build
 
       # 3. Install backend dependencies (sanity check)
       - name: Install backend dependencies
-        working-directory: .
         run: npm install
 
       # 4. Copy files to Linux server
