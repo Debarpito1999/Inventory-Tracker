@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useRef } from 'react';
 import { productionsAPI, productsAPI } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import './Production.css';
@@ -12,6 +12,7 @@ const Production = () => {
   const [viewMode, setViewMode] = useState('all'); // 'all', 'daily'
   const [message, setMessage] = useState({ type: '', text: '' });
   const { user } = useContext(AuthContext);
+  const addClickGuardRef = useRef({ raw: 0, produced: 0 });
 
   const [productionForm, setProductionForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -69,55 +70,73 @@ const Production = () => {
   }, [viewMode, loadAllProductions, loadDailyProductions]);
 
   const handleAddRawMaterial = () => {
-    setProductionForm({
-      ...productionForm,
-      rawMaterials: [...productionForm.rawMaterials, { productId: '', quantity: '' }]
-    });
+    const now = Date.now();
+    if (now - addClickGuardRef.current.raw < 250) return;
+    addClickGuardRef.current.raw = now;
+
+    setProductionForm((prev) => ({
+      ...prev,
+      rawMaterials: [...prev.rawMaterials, { productId: '', quantity: '' }]
+    }));
   };
 
   const handleRemoveRawMaterial = (index) => {
-    const newRawMaterials = productionForm.rawMaterials.filter((_, i) => i !== index);
-    setProductionForm({ ...productionForm, rawMaterials: newRawMaterials });
+    setProductionForm((prev) => ({
+      ...prev,
+      rawMaterials: prev.rawMaterials.filter((_, i) => i !== index)
+    }));
   };
 
   const handleRawMaterialChange = (index, field, value) => {
-    const newRawMaterials = [...productionForm.rawMaterials];
-    newRawMaterials[index][field] = value;
-    setProductionForm({ ...productionForm, rawMaterials: newRawMaterials });
-  };
-
-  const handleAddProducedProduct = () => {
-    setProductionForm({
-      ...productionForm,
-      producedProducts: [
-        ...productionForm.producedProducts,
-        { productId: '', quantity: '', isNew: false, name: '', category: '', price: '' }
-      ]
+    setProductionForm((prev) => {
+      const newRawMaterials = [...prev.rawMaterials];
+      newRawMaterials[index][field] = value;
+      return { ...prev, rawMaterials: newRawMaterials };
     });
   };
 
+  const handleAddProducedProduct = () => {
+    const now = Date.now();
+    if (now - addClickGuardRef.current.produced < 250) return;
+    addClickGuardRef.current.produced = now;
+
+    setProductionForm((prev) => ({
+      ...prev,
+      producedProducts: [
+        ...prev.producedProducts,
+        { productId: '', quantity: '', isNew: false, name: '', category: '', price: '' }
+      ]
+    }));
+  };
+
   const handleRemoveProducedProduct = (index) => {
-    const newProducedProducts = productionForm.producedProducts.filter((_, i) => i !== index);
-    setProductionForm({ ...productionForm, producedProducts: newProducedProducts });
+    setProductionForm((prev) => ({
+      ...prev,
+      producedProducts: prev.producedProducts.filter((_, i) => i !== index)
+    }));
   };
 
   const handleProducedProductChange = (index, field, value) => {
-    const newProducedProducts = [...productionForm.producedProducts];
-    newProducedProducts[index][field] = value;
-    setProductionForm({ ...productionForm, producedProducts: newProducedProducts });
+    setProductionForm((prev) => {
+      const newProducedProducts = [...prev.producedProducts];
+      newProducedProducts[index][field] = value;
+      return { ...prev, producedProducts: newProducedProducts };
+    });
   };
   
   const toggleProducedProductMode = (index, isNew) => {
-    const newProducedProducts = [...productionForm.producedProducts];
-    newProducedProducts[index] = {
-      productId: isNew ? '' : newProducedProducts[index].productId,
-      quantity: newProducedProducts[index].quantity,
-      isNew,
-      name: isNew ? newProducedProducts[index].name : '',
-      category: newProducedProducts[index].category,
-      price: newProducedProducts[index].price
-    };
-    setProductionForm({ ...productionForm, producedProducts: newProducedProducts });
+    setProductionForm((prev) => {
+      const newProducedProducts = [...prev.producedProducts];
+      newProducedProducts[index] = {
+        productId: isNew ? '' : newProducedProducts[index].productId,
+        quantity: newProducedProducts[index].quantity,
+        isNew,
+        name: isNew ? newProducedProducts[index].name : '',
+        category: newProducedProducts[index].category,
+        price: newProducedProducts[index].price
+      };
+      return { ...prev, producedProducts: newProducedProducts };
+    });
   };
 
   const handleProductionSubmit = async (e) => {
@@ -517,5 +536,4 @@ const Production = () => {
 };
 
 export default Production;
-
 

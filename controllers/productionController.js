@@ -6,7 +6,7 @@ const { checkAndAlertLowStock } = require('../utils/lowStockChecker');
 // Get all productions
 const getAll = async (req, res) => {
   try {
-    const productions = await Production.find()
+    const productions = await Production.find({ user: req.user._id })
       .populate('rawMaterials.productId')
       .populate('producedProducts.productId')
       .sort({ date: -1, createdAt: -1 });
@@ -20,7 +20,7 @@ const getAll = async (req, res) => {
 const getByDateRange = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    const query = {};
+    const query = { user: req.user._id };
     
     if (startDate || endDate) {
       query.date = {};
@@ -48,6 +48,7 @@ const getByDate = async (req, res) => {
     endOfDay.setHours(23, 59, 59, 999);
     
     const productions = await Production.find({
+      user: req.user._id,
       date: { $gte: startOfDay, $lte: endOfDay }
     })
       .populate('rawMaterials.productId')
@@ -77,6 +78,7 @@ const create = async (req, res) => {
     // Fetch raw material products to validate and get names
     const rawMaterialProducts = await Product.find({
       _id: { $in: rawMaterials.map(rm => rm.productId) },
+      user: req.user._id,
       type: 'raw'
     });
     
@@ -117,6 +119,7 @@ const create = async (req, res) => {
       // Create newly produced products within the transaction
       if (newProducedProducts.length > 0) {
         const productsToCreate = newProducedProducts.map(pp => ({
+          user: req.user._id,
           name: pp.name,
           category: pp.category,
           price: pp.price,
@@ -155,7 +158,8 @@ const create = async (req, res) => {
       });
       
       const producedProductDocs = await Product.find({
-        _id: { $in: producedProductIds }
+        _id: { $in: producedProductIds },
+        user: req.user._id
       }).session(session);
       
       if (producedProductDocs.length !== producedProducts.length) {
@@ -213,7 +217,7 @@ const create = async (req, res) => {
       // Atomically check and deduct raw materials from stock
       // Using findOneAndUpdate with conditions ensures atomic check-and-update
       for (const rm of rawMaterialsWithNames) {
-        const product = rawMaterialProducts.find(p => p._id.toString() === rm.productId);
+        const product = rawMaterialProducts.find(p => p._id.toString() === rm.productId.toString());
         if (!product) {
           throw new Error(`Raw material ${rm.productId} not found`);
         }
@@ -222,6 +226,7 @@ const create = async (req, res) => {
         const updatedRawProduct = await Product.findOneAndUpdate(
           { 
             _id: rm.productId, 
+            user: req.user._id,
             stock: { $gte: rm.quantity } // Only update if stock is sufficient
           },
           { 
@@ -235,7 +240,7 @@ const create = async (req, res) => {
         
         if (!updatedRawProduct) {
           // Get current stock for accurate error message
-          const currentProduct = await Product.findById(rm.productId).session(session);
+          const currentProduct = await Product.findOne({ _id: rm.productId, user: req.user._id }).session(session);
           const currentStock = currentProduct ? currentProduct.stock : 0;
           throw new Error(
             `Insufficient stock for ${product.name}. Available: ${currentStock}, Required: ${rm.quantity}`
@@ -245,8 +250,8 @@ const create = async (req, res) => {
       
       // Add produced products to stock (within transaction)
       for (const pp of producedProductsWithNames) {
-        await Product.findByIdAndUpdate(
-          pp.productId,
+        await Product.findOneAndUpdate(
+          { _id: pp.productId, user: req.user._id },
           {
             $inc: { stock: pp.quantity },
             lastRestocked: new Date()
@@ -257,6 +262,7 @@ const create = async (req, res) => {
       
       // Create production record (within transaction)
       const production = await Production.create([{
+        user: req.user._id,
         date: date ? new Date(date) : new Date(),
         rawMaterials: rawMaterialsWithNames,
         producedProducts: producedProductsWithNames,
@@ -270,16 +276,16 @@ const create = async (req, res) => {
       
       // After successful transaction, check for low stock alerts (outside transaction)
       for (const rm of rawMaterialsWithNames) {
-        const updatedProduct = await Product.findById(rm.productId);
+        const updatedProduct = await Product.findOne({ _id: rm.productId, user: req.user._id });
         await checkAndAlertLowStock(updatedProduct);
       }
       
       for (const pp of producedProductsWithNames) {
-        const updatedProduct = await Product.findById(pp.productId);
+        const updatedProduct = await Product.findOne({ _id: pp.productId, user: req.user._id });
         await checkAndAlertLowStock(updatedProduct);
       }
       
-      const populatedProduction = await Production.findById(production[0]._id)
+      const populatedProduction = await Production.findOne({ _id: production[0]._id, user: req.user._id })
         .populate('rawMaterials.productId')
         .populate('producedProducts.productId');
       
@@ -300,7 +306,7 @@ const create = async (req, res) => {
 const getStats = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    const query = {};
+    const query = { user: req.user._id };
     
     if (startDate || endDate) {
       query.date = {};
@@ -346,4 +352,3 @@ module.exports = {
   create,
   getStats
 };
-

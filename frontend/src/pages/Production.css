@@ -141,9 +141,12 @@
 }
 
 .production-modal {
-  max-width: 700px;
+  width: min(96vw, 1080px);
+  max-width: 1080px;
   max-height: 90vh;
   overflow-y: auto;
+  padding: 1.75rem;
+  border-radius: 12px;
 }
 
 .form-group-header {
@@ -154,22 +157,47 @@
 }
 
 .form-row {
-  display: flex;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) minmax(120px, 1fr) auto;
+  gap: 0.75rem;
   margin-bottom: 0.75rem;
   align-items: center;
 }
 
 .form-row .form-select {
-  flex: 2;
+  width: 100%;
+  min-width: 0;
 }
 
 .form-row .form-input {
-  flex: 1;
+  width: 100%;
+  min-width: 0;
 }
 
 .form-row .btn {
   flex-shrink: 0;
+}
+
+.produced-product-row {
+  grid-template-columns: 1fr;
+  border: 1px solid #e8ebf0;
+  background: #fafbfc;
+  border-radius: 10px;
+  padding: 0.75rem;
+}
+
+.toggle-row {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.produced-product-row > .form-select,
+.produced-product-row > .form-input {
+  width: 100%;
+}
+
+.produced-product-row > .btn {
+  justify-self: end;
 }
 
 @media (max-width: 768px) {
@@ -201,7 +229,7 @@
   }
 
   .form-row {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 
   .form-row .form-select,

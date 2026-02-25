@@ -13,6 +13,7 @@ const producedProductSchema = new mongoose.Schema({
 });
 
 const productionSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   date: { type: Date, required: true, default: Date.now },
   rawMaterials: [rawMaterialSchema],
   producedProducts: [producedProductSchema],

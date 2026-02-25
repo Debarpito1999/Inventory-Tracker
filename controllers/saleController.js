@@ -1,5 +1,6 @@
 const Sale = require('../Models/Sale');
 const Product = require('../Models/Product');
+const Seller = require('../Models/Seller');
 const { checkAndAlertLowStock } = require('../utils/lowStockChecker');
 
 exports.createSale = async (req, res) => {
@@ -8,8 +9,12 @@ exports.createSale = async (req, res) => {
   if (!sellerId) return res.status(400).json({ message: 'Seller is required' });
   if (!unitPrice || unitPrice <= 0) return res.status(400).json({ message: 'Unit price is required and must be greater than 0' });
   
-  const product = await Product.findById(productId);
+  const product = await Product.findOne({ _id: productId, user: req.user._id });
   if (!product) return res.status(404).json({ message: 'Product not found' });
+
+  const seller = await Seller.findOne({ _id: sellerId, user: req.user._id });
+  if (!seller) return res.status(404).json({ message: 'Seller not found' });
+
   if (product.stock < quantity) return res.status(400).json({ message: 'Insufficient stock' });
 
   // Store old stock before reduction
@@ -23,7 +28,14 @@ exports.createSale = async (req, res) => {
   await checkAndAlertLowStock(product, oldStock);
 
   const totalPrice = unitPrice * quantity;
-  const sale = await Sale.create({ product: productId, seller: sellerId, quantity, unitPrice, totalPrice });
+  const sale = await Sale.create({
+    user: req.user._id,
+    product: productId,
+    seller: sellerId,
+    quantity,
+    unitPrice,
+    totalPrice
+  });
   await sale.populate('seller');
   await sale.populate('product');
   res.status(201).json(sale);

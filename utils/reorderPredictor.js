@@ -1,8 +1,11 @@
 const Sale = require("../Models/Sale");
 const linearRegression = require("./linearRegression");
 
-const predictReorder = async (productId, currentStock) => {
-  const sales = await Sale.find({ product: productId }).sort({ saleDate: 1 });
+const predictReorder = async (productId, currentStock, userId = null) => {
+  const query = { product: productId };
+  if (userId) query.user = userId;
+
+  const sales = await Sale.find(query).sort({ saleDate: 1 });
 
   if (sales.length < 5) {
     return {
