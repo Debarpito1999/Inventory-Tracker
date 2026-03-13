@@ -8,6 +8,8 @@ const { getReorderSuggestion } = require('./controllers/aiController');
 const helmet = require('helmet');
 const morgan = require('morgan');
 
+// In microservices mode this app will run on a different port,
+// behind the API Gateway. Keep its behavior the same.
 connectDB();
 const app = express();
 
@@ -24,8 +26,7 @@ app.use(express.urlencoded({ extended: true }));
 const upload = multer();
 app.use(upload.none());
 
-// Routes
-app.use('/api/auth', require('./routes/authRoutes'));
+// Routes (excluding /api/auth, which is now handled by auth-service via gateway)
 app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/suppliers', require('./routes/supplierRoutes'));
 app.use('/api/sellers', require('./routes/sellerRoutes'));
@@ -114,6 +115,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: err.message });
 });
 
-const PORT = process.env.PORT || 5000;
+// Run monolith backend on 5002 when using gateway
+const PORT = process.env.PORT || 5002;
 app.set('trust proxy', 1);
-app.listen(PORT, () => console.log(`Server running on ${PORT}`));
+app.listen(PORT, () => console.log(`Legacy backend running on ${PORT}`));
