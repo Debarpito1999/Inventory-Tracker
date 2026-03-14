@@ -2,12 +2,15 @@ const Product = require('../Models/Product');
 const { checkAndAlertLowStock } = require('../utils/lowStockChecker');
 
 const getAll = async (req, res) => {
-  const products = await Product.find();
+  const products = await Product.find({ user: req.user._id });
   res.json(products);
 };
 
 const create = async (req, res) => {
-  const p = await Product.create(req.body);
+  const p = await Product.create({
+    ...req.body,
+    user: req.user._id
+  });
   
   // Check for low stock and send alert if needed
   if (p.stock !== undefined) {
@@ -19,10 +22,18 @@ const create = async (req, res) => {
 
 const update = async (req, res) => {
   // Get old stock level before update
-  const oldProduct = await Product.findById(req.params.id);
+  const oldProduct = await Product.findOne({ _id: req.params.id, user: req.user._id });
   const oldStock = oldProduct ? oldProduct.stock : null;
+
+  if (!oldProduct) {
+    return res.status(404).json({ message: 'Product not found' });
+  }
   
-  const p = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+  const p = await Product.findOneAndUpdate(
+    { _id: req.params.id, user: req.user._id },
+    { ...req.body, user: req.user._id },
+    { new: true }
+  );
   
   // Check for low stock if stock was changed
   if (req.body.stock !== undefined && req.body.stock !== oldStock) {
@@ -33,13 +44,17 @@ const update = async (req, res) => {
 };
 
 const remove = async (req, res) => {
-  await Product.findByIdAndDelete(req.params.id);
+  const deleted = await Product.findOneAndDelete({ _id: req.params.id, user: req.user._id });
+  if (!deleted) {
+    return res.status(404).json({ message: 'Product not found' });
+  }
+
   res.json({ message: 'Deleted' });
 };
 
 const getLowStock = async (req, res) => {
   const threshold = parseInt(req.query.t || '10', 10);
-  const low = await Product.find({ stock: { $lt: threshold } });
+  const low = await Product.find({ user: req.user._id, stock: { $lt: threshold } });
   res.json(low);
 };
 

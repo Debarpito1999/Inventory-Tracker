@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const producedTransactSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
   // Link back to the Product
   product: {
     type: mongoose.Schema.Types.ObjectId,

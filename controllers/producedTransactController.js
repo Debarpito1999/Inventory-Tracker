@@ -13,13 +13,14 @@ const createTransaction = async (req, res) => {
       });
     }
 
-    const product = await Product.findById(productId);
+    const product = await Product.findOne({ _id: productId, user: req.user._id });
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
     // Create the transaction, taking the name from the product
     const transaction = await ProducedTransact.create({
+      user: req.user._id,
       product: product._id,
       name: product.name,
       date: date ? new Date(date) : undefined,
@@ -47,7 +48,7 @@ const createTransaction = async (req, res) => {
 const getAll = async (req, res) => {
   try {
     const { startDate, endDate, productId } = req.query;
-    const query = {};
+    const query = { user: req.user._id };
 
     if (productId) {
       query.product = productId;
@@ -74,7 +75,7 @@ const getAll = async (req, res) => {
 const getByProduct = async (req, res) => {
   try {
     const { productId } = req.params;
-    const tx = await ProducedTransact.find({ product: productId })
+    const tx = await ProducedTransact.find({ product: productId, user: req.user._id })
       .populate('product')
       .populate('supplier')
       .sort({ date: -1, createdAt: -1 });
@@ -89,5 +90,4 @@ module.exports = {
   getAll,
   getByProduct,
 };
-
 
