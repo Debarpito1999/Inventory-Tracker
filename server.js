@@ -13,7 +13,7 @@ const app = express();
 app.use(helmet());
 app.use(morgan("combined"));
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: ["http://localhost:3000", "http://13.127.150.195"],
   credentials: true
 }));
 app.use(express.json()); // Parse JSON bodies
