@@ -10,10 +10,9 @@ const app = express();
 app.use(helmet());
 app.use(morgan('combined'));
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: ['http://localhost:3000', 'http://13.127.150.195'],
   credentials: true
 }));
-app.use(express.json());
 
 // Target backends
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://localhost:5001';
@@ -22,46 +21,65 @@ const SALES_SERVICE_URL = process.env.SALES_SERVICE_URL || 'http://localhost:500
 const SUPPLIER_SERVICE_URL = process.env.SUPPLIER_SERVICE_URL || 'http://localhost:5005';
 const LEGACY_MONOLITH_URL = process.env.LEGACY_MONOLITH_URL || 'http://localhost:5002';
 
-// Proxy auth routes to auth-service
-app.use(
-  '/api/auth',
-  createProxyMiddleware({
-    target: AUTH_SERVICE_URL,
-    changeOrigin: true,
-    pathRewrite: { '^/api': '' }, // /api/auth -> /auth at auth-service, but auth-service mounts /api/auth, so keep /api
-    onProxyReq: (proxyReq, req) => {
-      // Forward original IP info if needed
-      proxyReq.setHeader('x-forwarded-host', req.headers.host || '');
-    }
-  })
-);
+// Proxy auth routes to auth-service (preserve /api/auth prefix)
+const authProxy = createProxyMiddleware({
+  target: AUTH_SERVICE_URL,
+  changeOrigin: true
+});
 
-// Proxy inventory-related routes to inventory-service
-app.use(
-  ['/api/products', '/api/productions', '/api/produced-transactions'],
-  createProxyMiddleware({
-    target: INVENTORY_SERVICE_URL,
-    changeOrigin: true
-  })
-);
+app.use('/api/auth', (req, res, next) => {
+  // Restore the /api/auth prefix so auth-service sees /api/auth/...
+  req.url = '/api/auth' + req.url;
+  authProxy(req, res, next);
+});
 
-// Proxy sales routes to sales-service
-app.use(
-  '/api/sales',
-  createProxyMiddleware({
-    target: SALES_SERVICE_URL,
-    changeOrigin: true
-  })
-);
+// Proxy inventory-related routes to inventory-service (preserve exact /api/<prefix> paths)
+const inventoryProxy = createProxyMiddleware({
+  target: INVENTORY_SERVICE_URL,
+  changeOrigin: true
+});
 
-// Proxy supplier and seller routes to supplier-service
-app.use(
-  ['/api/suppliers', '/api/sellers'],
-  createProxyMiddleware({
-    target: SUPPLIER_SERVICE_URL,
-    changeOrigin: true
-  })
-);
+app.use('/api/products', (req, res, next) => {
+  req.url = '/api/products' + req.url; // '' -> '/api/products/'
+  inventoryProxy(req, res, next);
+});
+
+app.use('/api/productions', (req, res, next) => {
+  req.url = '/api/productions' + req.url;
+  inventoryProxy(req, res, next);
+});
+
+app.use('/api/produced-transactions', (req, res, next) => {
+  req.url = '/api/produced-transactions' + req.url;
+  inventoryProxy(req, res, next);
+});
+
+// Proxy sales routes to sales-service (preserve /api/sales prefix)
+const salesProxy = createProxyMiddleware({
+  target: SALES_SERVICE_URL,
+  changeOrigin: true
+});
+
+app.use('/api/sales', (req, res, next) => {
+  req.url = '/api/sales' + req.url; // e.g. / -> /api/sales, /?q= -> /api/sales?q=
+  salesProxy(req, res, next);
+});
+
+// Proxy supplier and seller routes to supplier-service (preserve exact /api/<prefix> paths)
+const supplierProxy = createProxyMiddleware({
+  target: SUPPLIER_SERVICE_URL,
+  changeOrigin: true
+});
+
+app.use('/api/suppliers', (req, res, next) => {
+  req.url = '/api/suppliers' + req.url;
+  supplierProxy(req, res, next);
+});
+
+app.use('/api/sellers', (req, res, next) => {
+  req.url = '/api/sellers' + req.url;
+  supplierProxy(req, res, next);
+});
 
 // Proxy everything else to the existing monolith for now
 app.use(
