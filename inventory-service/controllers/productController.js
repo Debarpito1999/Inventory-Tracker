@@ -6,6 +6,14 @@ const getAll = async (req, res) => {
   res.json(products);
 };
 
+const getById = async (req, res) => {
+  const p = await Product.findOne({ _id: req.params.id, user: req.user._id });
+  if (!p) {
+    return res.status(404).json({ message: 'Product not found' });
+  }
+  res.json(p);
+};
+
 const create = async (req, res) => {
   const p = await Product.create({
     ...req.body,
@@ -57,6 +65,7 @@ const getLowStock = async (req, res) => {
 
 module.exports = {
   getAll,
+  getById,
   create,
   update,
   remove,

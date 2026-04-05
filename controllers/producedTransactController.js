@@ -2,14 +2,22 @@ const Product = require('../Models/Product');
 const ProducedTransact = require('../Models/ProducedTransact');
 
 // Create a new produced transaction and update product stock
-// Expected body: { productId, quantity, price, type, supplier, date? }
+// Expected body: { productId, quantity, price, type, supplier, supplierName, date? }
+// supplierName is stored on the transaction (required for microservices where Supplier lives in another DB).
 const createTransaction = async (req, res) => {
   try {
-    const { productId, quantity, price, type, supplier, date } = req.body;
+    const { productId, quantity, price, type, supplier, supplierName, date } = req.body;
 
     if (!productId || !quantity || !price || !type || !supplier) {
       return res.status(400).json({
         message: 'productId, quantity, price, type and supplier are required',
+      });
+    }
+
+    const nameTrim = supplierName != null ? String(supplierName).trim() : '';
+    if (!nameTrim) {
+      return res.status(400).json({
+        message: 'supplierName is required',
       });
     }
 
@@ -28,6 +36,7 @@ const createTransaction = async (req, res) => {
       type,
       quantity,
       supplier,
+      supplierName: nameTrim,
     });
 
     // Increase product stock by transaction quantity
@@ -62,7 +71,6 @@ const getAll = async (req, res) => {
 
     const tx = await ProducedTransact.find(query)
       .populate('product')
-      .populate('supplier')
       .sort({ date: -1, createdAt: -1 });
 
     res.json(tx);
@@ -77,7 +85,6 @@ const getByProduct = async (req, res) => {
     const { productId } = req.params;
     const tx = await ProducedTransact.find({ product: productId, user: req.user._id })
       .populate('product')
-      .populate('supplier')
       .sort({ date: -1, createdAt: -1 });
     res.json(tx);
   } catch (error) {

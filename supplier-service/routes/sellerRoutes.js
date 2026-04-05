@@ -4,6 +4,7 @@ const { protect } = require('../middleware/authMiddleware');
 const sellerController = require('../controllers/sellerController');
 
 router.get('/', protect, sellerController.getAllSellers);
+router.get('/:id', protect, sellerController.getSellerById);
 router.post('/', protect, sellerController.createSeller);
 router.put('/:id', protect, sellerController.updateSeller);
 router.delete('/:id', protect, sellerController.deleteSeller);

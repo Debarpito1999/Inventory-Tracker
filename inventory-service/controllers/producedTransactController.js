@@ -1,15 +1,38 @@
 const Product = require('../models/Product');
 const ProducedTransact = require('../models/ProducedTransact');
+const {
+  fetchSupplierById,
+  attachSuppliersToTransactions,
+} = require('../services/supplierClient');
 
 const createTransaction = async (req, res) => {
   try {
-    const { productId, quantity, price, type, supplier, date } = req.body;
+    const { productId, quantity, price, type, supplier, supplierName, date } = req.body;
 
     if (!productId || !quantity || !price || !type || !supplier) {
       return res.status(400).json({
         message: 'productId, quantity, price, type and supplier are required'
       });
     }
+
+    const auth = req.headers.authorization;
+    let sDoc;
+    try {
+      sDoc = await fetchSupplierById(supplier, auth);
+    } catch (err) {
+      return res.status(503).json({
+        message: 'Supplier service unavailable',
+        detail: err.message,
+      });
+    }
+    if (!sDoc) {
+      return res.status(404).json({
+        message: 'Supplier not found (check supplier-service and SUPPLIER_SERVICE_URL in inventory-service .env)',
+      });
+    }
+
+    const nameTrim =
+      (supplierName != null && String(supplierName).trim()) || sDoc.name || '';
 
     const product = await Product.findOne({ _id: productId, user: req.user._id });
     if (!product) {
@@ -24,7 +47,8 @@ const createTransaction = async (req, res) => {
       price,
       type,
       quantity,
-      supplier
+      supplier,
+      supplierName: nameTrim
     });
 
     product.stock = (product.stock || 0) + Number(quantity);
@@ -57,10 +81,9 @@ const getAll = async (req, res) => {
 
     const tx = await ProducedTransact.find(query)
       .populate('product')
-      .populate('supplier')
       .sort({ date: -1, createdAt: -1 });
 
-    res.json(tx);
+    res.json(await attachSuppliersToTransactions(tx, req.headers.authorization));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -71,9 +94,8 @@ const getByProduct = async (req, res) => {
     const { productId } = req.params;
     const tx = await ProducedTransact.find({ product: productId, user: req.user._id })
       .populate('product')
-      .populate('supplier')
       .sort({ date: -1, createdAt: -1 });
-    res.json(tx);
+    res.json(await attachSuppliersToTransactions(tx, req.headers.authorization));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

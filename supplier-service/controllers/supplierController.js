@@ -5,6 +5,17 @@ exports.getAllSuppliers = async (req, res) => {
   res.json(suppliers);
 };
 
+exports.getSupplierById = async (req, res) => {
+  const supplier = await Supplier.findOne({
+    _id: req.params.id,
+    user: req.user._id,
+  });
+  if (!supplier) {
+    return res.status(404).json({ message: 'Supplier not found' });
+  }
+  res.json(supplier);
+};
+
 exports.createSupplier = async (req, res) => {
   const supplier = await Supplier.create({
     ...req.body,
