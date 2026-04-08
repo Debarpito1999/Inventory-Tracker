@@ -306,7 +306,7 @@ const Products = () => {
                       <span className="pill">{tx.type}</span>
                     </td>
                     <td>{tx.quantity}</td>
-                    <td>{tx.supplier?.name || 'N/A'}</td>
+                    <td>{tx.supplierName || tx.supplier?.name || 'N/A'}</td>
                   </tr>
                 ))}
               </tbody>

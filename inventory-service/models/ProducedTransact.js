@@ -31,10 +31,14 @@ const producedTransactSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  // Supplier document lives in supplier-service; inventory-service resolves via HTTP + stores snapshot
   supplier: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Supplier',
     required: true
+  },
+  supplierName: {
+    type: String,
+    trim: true
   }
 }, {
   timestamps: true

@@ -25,12 +25,14 @@ const TransactionModal = ({ products, suppliers, onClose, onSave }) => {
     setLoading(true);
 
     try {
+      const selected = suppliers.find((s) => String(s._id) === String(formData.supplier));
       const data = {
         productId: formData.productId,
         quantity: parseInt(formData.quantity) || 0,
         price: parseFloat(formData.price) || 0,
         type: formData.type,
         supplier: formData.supplier,
+        supplierName: selected?.name || '',
         date: formData.date || undefined,
       };
 

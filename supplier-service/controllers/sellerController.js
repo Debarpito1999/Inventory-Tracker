@@ -5,6 +5,17 @@ exports.getAllSellers = async (req, res) => {
   res.json(sellers);
 };
 
+exports.getSellerById = async (req, res) => {
+  const seller = await Seller.findOne({
+    _id: req.params.id,
+    user: req.user._id,
+  });
+  if (!seller) {
+    return res.status(404).json({ message: 'Seller not found' });
+  }
+  res.json(seller);
+};
+
 exports.createSeller = async (req, res) => {
   const seller = await Seller.create({
     ...req.body,
