@@ -27,7 +27,7 @@ app.get('/api/health', (req, res) => {
 
 const PORT = process.env.PORT || 5005;
 app.set('trust proxy', 1);
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Supplier service running on port ${PORT}`);
 });
 

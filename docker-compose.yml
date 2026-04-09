@@ -1,0 +1,66 @@
+version: "3.9"
+
+services:
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - "5001:5001"
+    env_file:
+      - ./auth-service/.env
+    restart: always
+
+  inventory-service:
+    build: ./inventory-service
+    container_name: inventory-service
+    ports:
+      - "5003:5003"
+    env_file:
+      - ./inventory-service/.env
+    restart: always
+
+  sales-service:
+    build: ./sales-service
+    container_name: sales-service
+    ports:
+      - "5004:5004"
+    env_file:
+      - ./sales-service/.env
+    depends_on:
+      - inventory-service
+      - supplier-service
+    restart: always
+
+  supplier-service:
+    build: ./supplier-service
+    container_name: supplier-service
+    ports:
+      - "5005:5005"
+    env_file:
+      - ./supplier-service/.env
+    restart: always
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./api-gateway/.env
+    depends_on:
+      - auth-service
+      - inventory-service
+      - sales-service
+      - supplier-service
+    restart: always
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - api-gateway
+    restart: always
